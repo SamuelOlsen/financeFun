@@ -8,6 +8,10 @@ import yfinance as yf
 import datetime
 import pandas as pd
 
+# Declare eps as a global variable
+eps = None
+late = None
+
 def create_database():
 
 
@@ -139,6 +143,7 @@ def insert_value(pe_values):
 
 
 def fetch_historical_pe(symbol):
+    global eps  # Declare eps as global to modify it within the function
     # Hent dagens dato og datoen for en måned siden
     today = datetime.datetime.now()
     last_month = today - datetime.timedelta(days=30)
@@ -159,6 +164,7 @@ def fetch_historical_pe(symbol):
     #   Access the value using the index (if found)
     if 'diluted_eps_index' in locals():  # Check if index was found
         diluted_eps_value = df.values[diluted_eps_index][0]  # Access the entire row for 'Diluted EPS'
+        eps = diluted_eps_value
     # You can then access specific columns within the row (e.g., value for 'Diluted EPS')
     else:
         print("Diluted EPS not found in the index")
@@ -185,22 +191,77 @@ def index():
 
 @app.route('/stock', methods=['POST'])
 def stock():
+    global late
     symbol = request.form['symbol']
 
-    today = datetime.datetime.now()
+    #today = datetime.datetime.now()
+    #yesterday = today - datetime.timedelta(days = 1)  # Get yesterday's date
 
     fetch_historical_pe(symbol)
 
     # Focus on the most recent data point (assuming daily data)
     # Adjust 'Close' if you need a different closing price metric
-    latest_price = yf.download(symbol, start=today.strftime('%Y-%m-%d'), end=today.strftime('%Y-%m-%d'))['Close'].iloc[-1]
+    today = datetime.datetime.now()
+    last_month = today - datetime.timedelta(days=2)
+
+    # Hent daglige aktiekurser fra Yahoo Finance
+    stock_data = yf.download(symbol, start=last_month.strftime('%Y-%m-%d'), end=today.strftime('%Y-%m-%d'))['Close'].iloc[-1]
 
     # Optional: You can create a dictionary if you want more data
     # data_with_price = {"symbol": symbol, "latest_price": latest_price}
-    list_with_t = [str(latest_price)]
+    late = stock_data/eps
+    list_with_t = [str(stock_data), (str(stock_data/eps))]
 
 
     return render_template('index.html', data=list_with_t)
+
+@app.route('/compare', methods=['POST'])
+def compare():
+
+
+    # Fetch historical P/E values to compare with
+    try:
+        # Connect to the "financeDatabase"
+        conn = psycopg2.connect(
+            dbname="financedatabase",
+            user="postgres",
+            password="financeFun",
+            host="localhost",
+            port="5432"
+        )
+        conn.autocommit = True
+
+        # Create a cursor to execute SQL commands
+        cur = conn.cursor()
+
+        # Fetch P/E values from the "stock" table
+        cur.execute("SELECT pe FROM stock")
+        pe_values = cur.fetchall()
+
+        # Calculate the average P/E ratio
+        total_pe = sum(pe[0] for pe in pe_values)
+        avg_pe = total_pe / len(pe_values) if pe_values else None
+
+    except psycopg2.Error as e:
+        print("Error fetching P/E values:", e)
+        return None
+
+    finally:
+        # Close cursor and connection
+        if 'cur' in locals():
+            cur.close()
+        conn.close()
+
+
+    # Fetch the latest price for accurate comparison
+
+
+    if late is None:
+        comparison_result = "Latest P/E ratio is not available."
+    else:
+        comparison_result = f"Current P/E ratio ({late}) is {'bigger' if late > avg_pe else 'not bigger'} than the AVG P/E ratio ({avg_pe})."
+
+    return render_template('index.html', comparison_result=comparison_result)
 
 @app.route('/refresh', methods=['POST'])
 def refresh():

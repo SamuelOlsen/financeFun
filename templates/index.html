@@ -17,9 +17,17 @@
 
     {% if data %}
         <h2>Stock Data</h2>
-        <p>Symbol: {{ data['01. symbol'] }}</p>
-        <p>Price: {{ data[0] }}</p>
-        <p>Volume: {{ data['06. volume'] }}</p>
+        <p>Price: {{ data[0]  }}</p>
+        <p>P/E: {{ data[1] }}</p>
+        <form action="/compare" method="post">
+            <input type="hidden" name="current_pe" value="{{ data['pe_ratio'] }}">
+            <label for="comparison">Check if P/E is less than AVG(30 days)</label>
+            <button type="submit">Compare</button>
+        </form>
+    {% endif %}
+    {% if comparison_result %}
+        <h2>Comparison Result</h2>
+        <p>{{ comparison_result }}</p>
     {% endif %}
 </body>
 </html>

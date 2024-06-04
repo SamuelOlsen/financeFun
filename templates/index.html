@@ -17,8 +17,16 @@
 
     {% if data %}
         <h2>Stock Data</h2>
-        <p>Price: {{ data[0]  }}</p>
-        <p>P/E: {{ data[1] }}</p>
+        <p>Company Name: {{ data[0]  }}</p>
+        <p>Industry: {{ data[1] }}</p>
+        <p>Employees: {{ data[2]  }}</p>
+        <p>Description: {{ data[3]  }}</p>
+        <p>Price: {{ data[4]  }}</p>
+        <p>Opening price: {{ data[5]  }}</p>
+        <p>Previous closing price: {{ data[6]  }}</p>
+        <p>Volume: {{ data[7]  }}</p>
+        <p>P/E: {{ data[8] }}</p>
+
         <form action="/compare" method="post">
             <input type="hidden" name="current_pe" value="{{ data['pe_ratio'] }}">
             <label for="comparison">Check if P/E is less than AVG(30 days)</label>

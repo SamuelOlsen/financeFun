@@ -11,10 +11,14 @@
         <button type="submit">Get Quote</button>
     </form>
 
+    <form action="/refresh" method="post">
+        <button type="submit">Refresh Database</button>
+    </form>
+
     {% if data %}
         <h2>Stock Data</h2>
         <p>Symbol: {{ data['01. symbol'] }}</p>
-        <p>Price: {{ data['05. price'] }}</p>
+        <p>Price: {{ data[0] }}</p>
         <p>Volume: {{ data['06. volume'] }}</p>
     {% endif %}
 </body>

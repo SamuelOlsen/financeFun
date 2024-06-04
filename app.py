@@ -6,7 +6,7 @@ import requests
 import psycopg2
 import yfinance as yf
 import datetime
-
+import pandas as pd
 
 def create_database():
 
@@ -76,6 +76,36 @@ def create_table():
             cur.close()
         conn.close()
 
+def truncate_table():
+
+        try:
+            # Connect to the database
+            conn = psycopg2.connect(
+                dbname="financedatabase",
+                user="postgres",
+                password="financeFun",
+                host="localhost",
+                port="5432"
+            )
+            conn.autocommit = True
+
+            # Create a cursor
+            cur = conn.cursor()
+
+            # Truncate the table
+            cur.execute(f"TRUNCATE TABLE {'stock'}")
+
+            print(f"Table '{'stock'}' truncated successfully!")
+
+        except psycopg2.Error as e:
+            print(f"Error truncating table: {e}")
+
+        finally:
+            # Close cursor and connection
+            if 'cur' in locals():
+                cur.close()
+            conn.close()
+
 def insert_value(pe_values):
     try:
         # Opret forbindelse til "financeDatabase"
@@ -108,7 +138,7 @@ def insert_value(pe_values):
 
 
 
-def fetch_historical_pe(symbol, annual_eps):
+def fetch_historical_pe(symbol):
     # Hent dagens dato og datoen for en måned siden
     today = datetime.datetime.now()
     last_month = today - datetime.timedelta(days=30)
@@ -116,14 +146,29 @@ def fetch_historical_pe(symbol, annual_eps):
     # Hent daglige aktiekurser fra Yahoo Finance
     stock_data = yf.download(symbol, start=last_month.strftime('%Y-%m-%d'), end=today.strftime('%Y-%m-%d'))
 
+    df=yf.Ticker(symbol).financials
     # Beregn daglige P/E-ratioer
     pe_values = {}
+    first_diluted_eps = df.axes.copy()
+    rerr = first_diluted_eps[0].to_list()
+    for i, label in enumerate(rerr):
+        if label == 'Diluted EPS':
+            diluted_eps_index = i
+            break  # Stop iterating once you find 'Diluted EPS'
+
+    #   Access the value using the index (if found)
+    if 'diluted_eps_index' in locals():  # Check if index was found
+        diluted_eps_value = df.values[diluted_eps_index][0]  # Access the entire row for 'Diluted EPS'
+    # You can then access specific columns within the row (e.g., value for 'Diluted EPS')
+    else:
+        print("Diluted EPS not found in the index")
+
+
+
     for date, row in stock_data.iterrows():
-        pe_values[date.strftime('%Y-%m-%d')] = row['Close'] / annual_eps
+        pe_values[date.strftime('%Y-%m-%d')] = row['Close'] / diluted_eps_value
 
-    return pe_values
-
-
+    insert_value(pe_values)
 
 
 
@@ -137,40 +182,35 @@ API_KEY = 'YOUR_API_KEY'
 def index():
     return render_template('index.html')
 
+
 @app.route('/stock', methods=['POST'])
 def stock():
     symbol = request.form['symbol']
-    # URL til Alpha Vantage API
-    url = f"https://www.alphavantage.co/query?function=OVERVIEW&symbol={symbol}&apikey={API_KEY}"
 
-    # Send anmodningen til API'et
-    response = requests.get(url)
-    data = response.json()
+    today = datetime.datetime.now()
 
-    # Kontrollér om der er returneret data og udtræk P/E ratio
-    if 'PERatio' in data:
-        pe_ratio = data['PERatio']
-    else:
-        return "P/E ratio not found for the given symbol."
+    fetch_historical_pe(symbol)
 
-    print(pe_ratio)
+    # Focus on the most recent data point (assuming daily data)
+    # Adjust 'Close' if you need a different closing price metric
+    latest_price = yf.download(symbol, start=today.strftime('%Y-%m-%d'), end=today.strftime('%Y-%m-%d'))['Close'].iloc[-1]
 
-    """
-    symbol = request.form['symbol']
-    ts = TimeSeries(key=API_KEY, output_format='json')
-    data, meta_data = ts.get_quote_endpoint(symbol)
-    """
-    return render_template('index.html', data=data)
+    # Optional: You can create a dictionary if you want more data
+    # data_with_price = {"symbol": symbol, "latest_price": latest_price}
+    list_with_t = [str(latest_price)]
+
+
+    return render_template('index.html', data=list_with_t)
+
+@app.route('/refresh', methods=['POST'])
+def refresh():
+    truncate_table()
+    return render_template('index.html', data=None)
+
 
 if __name__ == '__main__':
+
     create_database()
     create_table()
 
-# Antag en EPS (dette bør justeres baseret på aktuel data)
-annual_eps = 5.00
-
-pe_values = fetch_historical_pe('AAPL', annual_eps)
-
-insert_value(pe_values)
-
-app.run(debug=True)
+    app.run(debug=True)

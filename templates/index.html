@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>FinanceFun</title>
+    <link rel="stylesheet" type="text/css" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+    <h1>FinanceFun</h1>
+    <form action="/stock" method="post">
+        <input type="text" name="symbol" placeholder="Enter stock symbol" required>
+        <button type="submit">Get Quote</button>
+    </form>
+
+    <form action="/refresh" method="post">
+        <button type="submit">Refresh Database</button>
+    </form>
+
+    {% if data %}
+        <h2>Stock Data</h2>
+        <p>Company Name: {{ data[0]  }}</p>
+        <p>Industry: {{ data[1] }}</p>
+        <p>Employees: {{ data[2]  }}</p>
+        <p>Description: {{ data[3]  }}</p>
+        <p>Price: {{ data[4]  }}</p>
+        <p>Opening price: {{ data[5]  }}</p>
+        <p>Previous closing price: {{ data[6]  }}</p>
+        <p>Volume: {{ data[7]  }}</p>
+        <p>P/E: {{ data[8] }}</p>
+
+        <form action="/compare" method="post">
+            <input type="hidden" name="current_pe" value="{{ data['pe_ratio'] }}">
+            <label for="comparison">Check if P/E is less than AVG(30 days)</label>
+            <button type="submit">Compare</button>
+        </form>
+    {% endif %}
+    {% if comparison_result %}
+        <h2>Comparison Result</h2>
+        <p>{{ comparison_result }}</p>
+    {% endif %}
+</body>
+</html>

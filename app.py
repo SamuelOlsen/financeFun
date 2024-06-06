@@ -206,12 +206,25 @@ def stock():
 
     # Hent daglige aktiekurser fra Yahoo Finance
     stock_data = yf.download(symbol, start=last_month.strftime('%Y-%m-%d'), end=today.strftime('%Y-%m-%d'))['Close'].iloc[-1]
+    current_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    ticker = yf.Ticker(symbol).info
+    # Company Info
+    company_name = ticker['longName']
+    company_industry = ticker['industry']
+    company_size = ticker['fullTimeEmployees']
+    company_description = ticker['longBusinessSummary']
+
+    # Stock Info
+    stock_open = ticker['open']
+    stock_close = ticker['previousClose']
+    stock_volume = ticker['volume']
 
     # Optional: You can create a dictionary if you want more data
     # data_with_price = {"symbol": symbol, "latest_price": latest_price}
     late = stock_data/eps
-    list_with_t = [str(stock_data), (str(stock_data/eps))]
 
+    list_with_t = [company_name, company_industry, company_size, company_description, stock_data, stock_open, stock_close, stock_volume,  stock_data/eps ]
 
     return render_template('index.html', data=list_with_t)
 

@@ -20,7 +20,7 @@ def create_database():
         conn = psycopg2.connect(
             dbname="postgres",
             user="postgres",
-            password="financeFun",
+            password="UIS",
             host="localhost",
             port="5432"
         )
@@ -52,7 +52,7 @@ def create_table():
         conn = psycopg2.connect(
             dbname="financedatabase",
             user="postgres",
-            password="financeFun",
+            password="UIS",
             host="localhost",
             port="5432"
         )
@@ -87,7 +87,7 @@ def truncate_table():
             conn = psycopg2.connect(
                 dbname="financedatabase",
                 user="postgres",
-                password="financeFun",
+                password="UIS",
                 host="localhost",
                 port="5432"
             )
@@ -116,7 +116,7 @@ def insert_value(pe_values):
         conn = psycopg2.connect(
             dbname="financedatabase",
             user="postgres",
-            password="financeFun",
+            password="UIS",
             host="localhost",
             port="5432"
         )
@@ -225,7 +225,7 @@ def compare():
         conn = psycopg2.connect(
             dbname="financedatabase",
             user="postgres",
-            password="financeFun",
+            password="UIS",
             host="localhost",
             port="5432"
         )

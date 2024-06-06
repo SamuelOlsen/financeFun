@@ -7,6 +7,7 @@ import psycopg2
 import yfinance as yf
 import datetime
 import pandas as pd
+import re
 
 # Declare eps as a global variable
 eps = None
@@ -193,6 +194,17 @@ def index():
 def stock():
     global late
     symbol = request.form['symbol']
+
+    # Define the regex pattern to match strings with only uppercase letters
+    pattern = r"^[A-Z]+$"
+
+    # Compile the regex pattern
+    regex = re.compile(pattern)
+    if regex.match(symbol) == None:
+        Notuppercase = "Buddy, you did not use uppercase letters! You have to, okay?"
+        donkey = [symbol, Notuppercase ]
+        return render_template('index.html', donkey=donkey)
+
 
     #today = datetime.datetime.now()
     #yesterday = today - datetime.timedelta(days = 1)  # Get yesterday's date

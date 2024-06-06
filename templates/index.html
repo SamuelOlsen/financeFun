@@ -11,6 +11,11 @@
         <button type="submit">Get Quote</button>
     </form>
 
+    {% if donkey %}
+        <h2>You wrote: {{ donkey[0] }} </h2>
+        <p>{{ donkey[1] }}</p>
+    {% endif %}
+
     <form action="/refresh" method="post">
         <button type="submit">Refresh Database</button>
     </form>

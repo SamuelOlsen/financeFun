@@ -13,43 +13,9 @@ import re
 eps = None
 late = None
 
-def create_database():
-
-
+def database_connection():
     try:
-        # Opret forbindelse til default "postgres" database for at oprette en ny database
-        conn = psycopg2.connect(
-            dbname="postgres",
-            user="postgres",
-            password="UIS",
-            host="localhost",
-            port="5432"
-        )
-        conn.autocommit = True
-
-        # Opret en cursor til at udføre SQL-kommandoer
-        cur = conn.cursor()
-
-        # Opret en ny database med navnet "financeDatabase"
-        cur.execute("CREATE DATABASE financeDatabase")
-
-        print("Database 'financeDatabase' oprettet succesfuldt!")
-
-    except psycopg2.errors.DuplicateDatabase:
-        print("Database 'financeDatabase' eksisterer allerede.")
-
-    except psycopg2.Error as e:
-        print("Fejl under oprettelse af database:", e)
-
-    finally:
-        # Luk cursor og forbindelse
-        if 'cur' in locals():
-            cur.close()
-        conn.close()
-
-def create_table():
-    try:
-        # Opret forbindelse til "financeDatabase"
+    # Opret forbindelse til default "postgres" database for at oprette en ny database
         conn = psycopg2.connect(
             dbname="financedatabase",
             user="postgres",
@@ -58,11 +24,43 @@ def create_table():
             port="5432"
         )
         conn.autocommit = True
+        return conn
+    except psycopg2.Error as e:
+        print("Error connecting to the database:", e)
+        return None
 
-        # Opret en cursor til at udføre SQL-kommandoer
+def create_database():
+    try:
+        conn = database_connection()
+        if conn is None:
+            return
+
+        # Cursor for SQL commands
         cur = conn.cursor()
+        # Create new database
+        cur.execute("CREATE DATABASE financeDatabase")
+        print("Database 'financeDatabase' created succesfully!")
 
-        # Eksempel: Opret en tabel
+    except psycopg2.errors.DuplicateDatabase:
+        print("Database 'financeDatabase' already exists.")
+    except psycopg2.Error as e:
+        print("Error while creating database: ", e)
+
+    finally:
+        # Close cursor and connection
+        if 'cur' in locals():
+            cur.close()
+        if 'conn' in locals():
+            conn.close()
+
+def create_table():
+    try:
+        conn = database_connection()
+        if conn is None:
+            return
+
+        cur = conn.cursor()
+        # Example: Create table
         cur.execute("""
             CREATE TABLE IF NOT EXISTS stock (
                 date DATE,
@@ -70,76 +68,56 @@ def create_table():
             )
         """)
 
-        print("Tabel 'users' oprettet succesfuldt!")
+        print("Table 'users' created succesfully!")
 
     except psycopg2.Error as e:
-        print("Fejl under oprettelse af tabel:", e)
+        print("Error while creating table: ", e)
 
     finally:
-        # Luk cursor og forbindelse
         if 'cur' in locals():
             cur.close()
-        conn.close()
+        if 'conn' in locals():
+            conn.close()
 
 def truncate_table():
-
         try:
-            # Connect to the database
-            conn = psycopg2.connect(
-                dbname="financedatabase",
-                user="postgres",
-                password="UIS",
-                host="localhost",
-                port="5432"
-            )
-            conn.autocommit = True
-
-            # Create a cursor
+            conn = database_connection()
+            if conn is None:
+                return
             cur = conn.cursor()
-
             # Truncate the table
             cur.execute(f"TRUNCATE TABLE {'stock'}")
-
             print(f"Table '{'stock'}' truncated successfully!")
 
         except psycopg2.Error as e:
             print(f"Error truncating table: {e}")
 
         finally:
-            # Close cursor and connection
             if 'cur' in locals():
                 cur.close()
-            conn.close()
+            if 'conn' in locals():
+                conn.close()
 
 def insert_value(pe_values):
     try:
-        # Opret forbindelse til "financeDatabase"
-        conn = psycopg2.connect(
-            dbname="financedatabase",
-            user="postgres",
-            password="UIS",
-            host="localhost",
-            port="5432"
-        )
-        conn.autocommit = True
-
-        # Opret en cursor til at udføre SQL-kommandoer
+        conn = database_connection()
+        if conn is None:
+            return
         cur = conn.cursor()
 
-        # Eksempel: Indsæt en værdi i tabellen
+        # Insert value into table
         for date, pe in pe_values.items():
             cur.execute("INSERT INTO stock (date, PE) VALUES (%s, %s)", (date, int(pe)))
-
-        print("Værdi indsat succesfuldt!")
-
+        print("Value inserted succesfully")
+    
     except psycopg2.Error as e:
-        print("Fejl under indsættelse af værdi:", e)
+        print("Error while inserting value: ", e)
 
     finally:
-        # Luk cursor og forbindelse
         if 'cur' in locals():
             cur.close()
-        conn.close()
+        if 'conn' in locals():
+            conn.close()
 
 
 
@@ -205,40 +183,35 @@ def stock():
         donkey = [symbol, Notuppercase ]
         return render_template('index.html', donkey=donkey)
 
+    # Trying to fetch data on the inserted stock symbol
+    try:
+        fetch_historical_pe(symbol)
+        today = datetime.datetime.now()
+        last_month = today - datetime.timedelta(days=2)
 
-    #today = datetime.datetime.now()
-    #yesterday = today - datetime.timedelta(days = 1)  # Get yesterday's date
+        # Downnload daily finance data from Yahoo Finance
+        stock_data = yf.download(symbol, start=last_month.strftime('%Y-%m-%d'), end=today.strftime('%Y-%m-%d'))['Close'].iloc[-1]
+        current_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-    fetch_historical_pe(symbol)
+        ticker = yf.Ticker(symbol).info
+        # Company Info
+        company_name = ticker['longName']
+        company_industry = ticker['industry']
+        company_size = ticker['fullTimeEmployees']
+        company_description = ticker['longBusinessSummary']
 
-    # Focus on the most recent data point (assuming daily data)
-    # Adjust 'Close' if you need a different closing price metric
-    today = datetime.datetime.now()
-    last_month = today - datetime.timedelta(days=2)
+        # Stock Info
+        stock_open = ticker['open']
+        stock_close = ticker['previousClose']
+        stock_volume = ticker['volume']
 
-    # Hent daglige aktiekurser fra Yahoo Finance
-    stock_data = yf.download(symbol, start=last_month.strftime('%Y-%m-%d'), end=today.strftime('%Y-%m-%d'))['Close'].iloc[-1]
-    current_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-    ticker = yf.Ticker(symbol).info
-    # Company Info
-    company_name = ticker['longName']
-    company_industry = ticker['industry']
-    company_size = ticker['fullTimeEmployees']
-    company_description = ticker['longBusinessSummary']
-
-    # Stock Info
-    stock_open = ticker['open']
-    stock_close = ticker['previousClose']
-    stock_volume = ticker['volume']
-
-    # Optional: You can create a dictionary if you want more data
-    # data_with_price = {"symbol": symbol, "latest_price": latest_price}
-    late = stock_data/eps
-
-    list_with_t = [company_name, company_industry, company_size, company_description, stock_data, stock_open, stock_close, stock_volume,  stock_data/eps ]
-
-    return render_template('index.html', data=list_with_t)
+        late = stock_data/eps
+        list_with_t = [company_name, company_industry, company_size, company_description, stock_data, stock_open, stock_close, stock_volume,  stock_data/eps ]
+        return render_template('index.html', data=list_with_t)
+     # If couldn't fetch data, the stock symbol doesn't exist (at least in Yahoo Finance).
+    except Exception as e:
+        error_message = f"Stock symbol '{symbol}' does not exist or there was an error fetching data."
+        return render_template('index.html', error_message=error_message)
 
 @app.route('/compare', methods=['POST'])
 def compare():

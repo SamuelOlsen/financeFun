@@ -16,6 +16,10 @@
         <p>{{ donkey[1] }}</p>
     {% endif %}
 
+    {% if error_message %}
+        <h2>{{ error_message }}</h2>
+    {% endif %}
+
     <form action="/refresh" method="post">
         <button type="submit">Refresh Database</button>
     </form>

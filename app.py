@@ -13,42 +13,9 @@ import re
 eps = None
 late = None
 
-def create_database():
-
+def database_connection():
     try:
-        # Opret forbindelse til default "postgres" database for at oprette en ny database
-        conn = psycopg2.connect(
-            dbname="postgres",
-            user="postgres",
-            password="UIS",
-            host="localhost",
-            port="5432"
-        )
-        conn.autocommit = True
-
-        # Opret en cursor til at udføre SQL-kommandoer
-        cur = conn.cursor()
-
-        # Opret en ny database med navnet "financeDatabase"
-        cur.execute("CREATE DATABASE financeDatabase")
-
-        print("Database 'financeDatabase' oprettet succesfuldt!")
-
-    except psycopg2.errors.DuplicateDatabase:
-        print("Database 'financeDatabase' eksisterer allerede.")
-
-    except psycopg2.Error as e:
-        print("Fejl under oprettelse af database:", e)
-
-    finally:
-        # Luk cursor og forbindelse
-        if 'cur' in locals():
-            cur.close()
-        conn.close()
-
-def create_table():
-    try:
-        # Opret forbindelse til "financeDatabase"
+    # Opret forbindelse til default "postgres" database for at oprette en ny database
         conn = psycopg2.connect(
             dbname="financedatabase",
             user="postgres",
@@ -57,11 +24,43 @@ def create_table():
             port="5432"
         )
         conn.autocommit = True
+        return conn
+    except psycopg2.Error as e:
+        print("Error connecting to the database:", e)
+        return None
 
-        # Opret en cursor til at udføre SQL-kommandoer
+def create_database():
+    try:
+        conn = database_connection()
+        if conn is None:
+            return
+
+        # Cursor for SQL commands
         cur = conn.cursor()
+        # Create new database
+        cur.execute("CREATE DATABASE financeDatabase")
+        print("Database 'financeDatabase' created succesfully!")
 
-        # Eksempel: Opret en tabel
+    except psycopg2.errors.DuplicateDatabase:
+        print("Database 'financeDatabase' already exists.")
+    except psycopg2.Error as e:
+        print("Error while creating database: ", e)
+
+    finally:
+        # Close cursor and connection
+        if 'cur' in locals():
+            cur.close()
+        if 'conn' in locals():
+            conn.close()
+
+def create_table():
+    try:
+        conn = database_connection()
+        if conn is None:
+            return
+
+        cur = conn.cursor()
+        # Example: Create table
         cur.execute("""
             CREATE TABLE IF NOT EXISTS stock (
                 date DATE,
@@ -69,76 +68,56 @@ def create_table():
             )
         """)
 
-        print("Tabel 'users' oprettet succesfuldt!")
+        print("Table 'users' created succesfully!")
 
     except psycopg2.Error as e:
-        print("Fejl under oprettelse af tabel:", e)
+        print("Error while creating table: ", e)
 
     finally:
-        # Luk cursor og forbindelse
         if 'cur' in locals():
             cur.close()
-        conn.close()
+        if 'conn' in locals():
+            conn.close()
 
 def truncate_table():
-
         try:
-            # Connect to the database
-            conn = psycopg2.connect(
-                dbname="financedatabase",
-                user="postgres",
-                password="UIS",
-                host="localhost",
-                port="5432"
-            )
-            conn.autocommit = True
-
-            # Create a cursor
+            conn = database_connection()
+            if conn is None:
+                return
             cur = conn.cursor()
-
             # Truncate the table
             cur.execute(f"TRUNCATE TABLE {'stock'}")
-
             print(f"Table '{'stock'}' truncated successfully!")
 
         except psycopg2.Error as e:
             print(f"Error truncating table: {e}")
 
         finally:
-            # Close cursor and connection
             if 'cur' in locals():
                 cur.close()
-            conn.close()
+            if 'conn' in locals():
+                conn.close()
 
 def insert_value(pe_values):
     try:
-        # Opret forbindelse til "financeDatabase"
-        conn = psycopg2.connect(
-            dbname="financedatabase",
-            user="postgres",
-            password="UIS",
-            host="localhost",
-            port="5432"
-        )
-        conn.autocommit = True
-
-        # Opret en cursor til at udføre SQL-kommandoer
+        conn = database_connection()
+        if conn is None:
+            return
         cur = conn.cursor()
 
-        # Eksempel: Indsæt en værdi i tabellen
+        # Insert value into table
         for date, pe in pe_values.items():
             cur.execute("INSERT INTO stock (date, PE) VALUES (%s, %s)", (date, int(pe)))
-
-        print("Værdi indsat succesfuldt!")
-
+        print("Value inserted succesfully")
+    
     except psycopg2.Error as e:
-        print("Fejl under indsættelse af værdi:", e)
+        print("Error while inserting value: ", e)
 
     finally:
-        # Luk cursor og forbindelse
         if 'cur' in locals():
             cur.close()
-        conn.close()
+        if 'conn' in locals():
+            conn.close()
 
 
 

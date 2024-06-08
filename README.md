@@ -25,3 +25,6 @@ This should now have created a financedatabase and you should be able to access 
 ```
 http://127.0.0.1:5000/
 ```
+When searching for a stock symbol, enter the stock symbol and press "Get quote". The web app will now display the stock data. 
+You can also check if the P/E value is less thann the average (30 days) by clicking on the "Compare" button.
+When you are done with a specific stock, you can click on the button "Refresh database" or simply search for a new stock symbol.

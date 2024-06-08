@@ -15,7 +15,6 @@ late = None
 
 def create_database():
 
-
     try:
         # Opret forbindelse til default "postgres" database for at oprette en ny database
         conn = psycopg2.connect(
@@ -205,40 +204,35 @@ def stock():
         donkey = [symbol, Notuppercase ]
         return render_template('index.html', donkey=donkey)
 
+    # Trying to fetch data on the inserted stock symbol
+    try:
+        fetch_historical_pe(symbol)
+        today = datetime.datetime.now()
+        last_month = today - datetime.timedelta(days=2)
 
-    #today = datetime.datetime.now()
-    #yesterday = today - datetime.timedelta(days = 1)  # Get yesterday's date
+        # Downnload daily finance data from Yahoo Finance
+        stock_data = yf.download(symbol, start=last_month.strftime('%Y-%m-%d'), end=today.strftime('%Y-%m-%d'))['Close'].iloc[-1]
+        current_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-    fetch_historical_pe(symbol)
+        ticker = yf.Ticker(symbol).info
+        # Company Info
+        company_name = ticker['longName']
+        company_industry = ticker['industry']
+        company_size = ticker['fullTimeEmployees']
+        company_description = ticker['longBusinessSummary']
 
-    # Focus on the most recent data point (assuming daily data)
-    # Adjust 'Close' if you need a different closing price metric
-    today = datetime.datetime.now()
-    last_month = today - datetime.timedelta(days=2)
+        # Stock Info
+        stock_open = ticker['open']
+        stock_close = ticker['previousClose']
+        stock_volume = ticker['volume']
 
-    # Hent daglige aktiekurser fra Yahoo Finance
-    stock_data = yf.download(symbol, start=last_month.strftime('%Y-%m-%d'), end=today.strftime('%Y-%m-%d'))['Close'].iloc[-1]
-    current_time = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-    ticker = yf.Ticker(symbol).info
-    # Company Info
-    company_name = ticker['longName']
-    company_industry = ticker['industry']
-    company_size = ticker['fullTimeEmployees']
-    company_description = ticker['longBusinessSummary']
-
-    # Stock Info
-    stock_open = ticker['open']
-    stock_close = ticker['previousClose']
-    stock_volume = ticker['volume']
-
-    # Optional: You can create a dictionary if you want more data
-    # data_with_price = {"symbol": symbol, "latest_price": latest_price}
-    late = stock_data/eps
-
-    list_with_t = [company_name, company_industry, company_size, company_description, stock_data, stock_open, stock_close, stock_volume,  stock_data/eps ]
-
-    return render_template('index.html', data=list_with_t)
+        late = stock_data/eps
+        list_with_t = [company_name, company_industry, company_size, company_description, stock_data, stock_open, stock_close, stock_volume,  stock_data/eps ]
+        return render_template('index.html', data=list_with_t)
+     # If couldn't fetch data, the stock symbol doesn't exist (at least in Yahoo Finance).
+    except Exception as e:
+        error_message = f"Stock symbol '{symbol}' does not exist or there was an error fetching data."
+        return render_template('index.html', error_message=error_message)
 
 @app.route('/compare', methods=['POST'])
 def compare():
